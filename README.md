@@ -1,4 +1,4 @@
-# Electronics & Filament Inventory Organizer
+# Inventory Management System
 
 A web-based inventory organizer for the **Drones & Robotics Club (DRC)**. The goal is to make it easier for club members to find electronic components, see where items are stored, monitor quantities, and track 3D-printer filament.
 
