@@ -1,110 +1,61 @@
-# Inventory Management System
+# DRC Inventory Organizer
 
-A web-based inventory organizer for the **Drones & Robotics Club (DRC)**. The goal is to make it easier for club members to find electronic components, see where items are stored, monitor quantities, and track 3D-printer filament.
+A web-based inventory organizer for the **Drones & Robotics Club (DRC)**. It is intended to track electronics components, borrowing and returns, and 3D-printer filament spools and usage.
 
-> **Project status:** Early prototype. The interface currently uses sample data. Database persistence and authentication are not yet connected.
+> **Status:** Early development scaffold. The dashboard currently uses sample data. Supabase persistence, authentication, and production security policies are not connected.
 
-## Features
+## Project workstreams
 
-- **Inventory dashboard** — overview of component quantities, filament stock, and low-stock alerts.
-- **Component catalog** — search components by name, category, or storage location.
-- **Borrow and return workflow** — prototype interface for recording component check-outs and returns.
-- **Filament tracking** — view spools by material, color, brand, storage location, and remaining weight.
-- **Filament usage logging** — prototype workflow for recording grams used.
-- **Project documentation** — project plan, initial data model, and team workflow guidance.
+The project is organized into five team groups:
 
-## Technology stack
+| Group | Responsibility | Brief |
+|---|---|---|
+| UI/UX | User research, workflows, wireframes, visual design, accessibility | [UI/UX](docs/workstreams/ui-ux.md) |
+| Frontend | React/TypeScript pages, components, forms, client-side integration | [Frontend](docs/workstreams/frontend.md) |
+| Backend | Supabase, PostgreSQL schema, authentication, RLS, secure operations | [Backend](docs/workstreams/backend.md) |
+| Deployment | GitHub collaboration, CI, Vercel, environments, releases | [Deployment](docs/workstreams/deployment.md) |
+| Inventory logic | Stock rules, borrowing/returns, spool balances, audit requirements | [Inventory logic](docs/workstreams/inventory-logic.md) |
 
-- **Frontend:** React, TypeScript, Vite
-- **UI icons:** Lucide React
-- **Backend/database planned:** Supabase (PostgreSQL, authentication, Row Level Security)
-- **Version control and collaboration:** GitHub
-- **Deployment planned:** Vercel
+Read [the workstream overview](docs/WORKSTREAMS.md) for shared agreements and group deliverables.
 
-## Getting started
+## Tech stack
+- React + TypeScript + Vite
+- Supabase / PostgreSQL (planned backend)
+- GitHub for collaboration
+- Vercel (planned hosting)
 
-### Prerequisites
-
-- Node.js 20 or later
-- npm
-- Git
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/Bilo566/Inventory_Management_System_DRC.git
-cd Inventory_Management_System_DRC
+## Repository layout
+```
+src/                    React application
+  types/                Shared TypeScript domain types
+docs/
+  WORKSTREAMS.md        Group responsibilities and coordination
+  workstreams/          One brief per team group
+supabase/
+  schema.sql            Initial database schema draft
+.env.example            Public frontend environment variable template
 ```
 
-### 2. Install dependencies
+## Run locally
+Requirements: Node.js 20+, npm, and Git.
 
 ```bash
 npm install
-```
-
-### 3. Start the development server
-
-```bash
 npm run dev
 ```
 
-Open the local URL printed in the terminal by Vite.
+Useful checks: `npm run typecheck`, `npm run build`, and `npm run preview`.
 
-### Other useful commands
+## Important limitations
+- The dashboard uses illustrative sample data, not the club's actual stock.
+- Borrow/return and filament usage are not yet implemented as persistent workflows.
+- The Supabase schema is an initial draft. RLS, role policies, and atomic inventory operations must be designed, implemented, and tested before real use.
+- Do not store real inventory or member data in this prototype.
+- Never commit secrets or put a Supabase service-role key in frontend code.
 
-```bash
-npm run build      # Type-check and build for production
-npm run typecheck  # Run the TypeScript project checks
-npm run preview    # Preview the production build locally
-```
-
-## Current limitations
-
-- The interface uses illustrative sample inventory; it is not the club's live stock list.
-- Borrowing, returning, and filament usage update temporary in-memory state only. Refreshing the page resets those changes.
-- Supabase has not yet been wired into the frontend.
-- The SQL schema in `supabase/schema.sql` is a starting point and needs testing and secure inventory-operation functions before real use.
-- Authentication, role management, and production deployment still need to be completed.
-
-**Do not use this prototype as the authoritative record of club inventory.**
-
-## Planned development
-
-1. Finalize requirements and user roles.
-2. Connect the frontend to Supabase.
-3. Implement persistent component search and stock management.
-4. Add secure, atomic borrow and return operations with transaction history.
-5. Implement filament spool records, usage logging, and weight adjustments.
-6. Add authentication, permissions, and low-stock alerts.
-7. Test with club members and deploy the application.
-
-See [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md), and [docs/TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md) for more details.
-
-## Environment configuration
-
-The repository includes an `.env.example` template for the planned Supabase connection. Once the backend integration is implemented, copy it to `.env.local` and fill in the project URL and public anon key:
-
-```bash
-cp .env.example .env.local
-```
-
-Never commit real credentials or secrets. **Never place a Supabase service-role key in frontend code.**
-
-## Contributing
-
-1. Create or choose a GitHub issue describing the task.
-2. Create a feature branch, for example:
-
-   ```bash
-   git checkout -b feat/component-search
-   ```
-
-3. Make a focused change and test it.
-4. Open a pull request with a summary and test steps.
-5. Request a teammate's review before merging.
-
-Do not commit secrets or real inventory data. Keep documentation up to date as features change.
-
-## License
-
-No license has been specified yet. Contact the repository owner before reusing or redistributing this project.
+## Team workflow
+1. Pick tasks from your workstream brief and create GitHub issues.
+2. Agree on data fields and business rules with the other groups before implementation.
+3. Work in feature branches and open pull requests.
+4. Run typecheck/build and test the changed workflow.
+5. Ask another teammate to review before merging.
