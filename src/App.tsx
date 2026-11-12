@@ -1,124 +1,122 @@
-import { Fragment, useMemo, useState } from "react";
-import { Boxes, Package, TriangleAlert, Cpu, ChevronDown, MapPin, Inbox } from "lucide-react";
-import type { ComponentItem } from "./types/inventory";
-import SearchBar from "./components/SearchBar";
-import StockBadge, { getStockStatus } from "./components/StockBadge";
+import { useState, type ReactNode } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
+import type { BorrowRecord, ComponentItem } from "./types/inventory";
+import { currentMember, sampleBorrows, sampleItems } from "./data/sampleData";
+import AppShell from "./components/AppShell";
+import AdminLayout from "./components/AdminLayout";
+import Home from "./pages/Home";
+import Category from "./pages/Category";
+import ItemDetail from "./pages/ItemDetail";
+import Placeholder, { NotFound } from "./pages/Placeholder";
+import type { BorrowRequest } from "./components/BorrowDialog";
+import type { ReturnRequest } from "./components/ReturnDialog";
 
-const statusOf = (item: ComponentItem) => getStockStatus(item.quantity, item.minimumStock);
-const needsRestock = (item: ComponentItem) => statusOf(item) !== "in";
+/* All page addresses live here.
+   Data comes from src/data/sampleData.ts for now and is kept in memory, so a full page reload resets it.
+   When Supabase is ready, swap the useState calls below for real queries. */
+
+const isActive = (b: BorrowRecord) => b.status === "borrowed" || b.status === "overdue";
 
 export default function App() {
-  // Filled from the database once the backend connection is added (src/lib/).
-  const [items] = useState<ComponentItem[]>([]);
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
-  const [stock, setStock] = useState("all");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [items, setItems] = useState<ComponentItem[]>(sampleItems);
+  const [borrows, setBorrows] = useState<BorrowRecord[]>(sampleBorrows);
+  const member = currentMember;
+  const pendingCount = borrows.filter(b => b.status === "pending").length;
 
-  const categories = useMemo(() => [...new Set(items.map(item => item.category))].sort(), [items]);
-  const visibleItems = useMemo(() => items.filter(item =>
-    [item.name, item.category, item.location, item.id].join(" ").toLowerCase().includes(query.trim().toLowerCase())
-    && (category === "all" || item.category === category)
-    && (stock === "all" || statusOf(item) === stock)
-  ), [items, query, category, stock]);
+  const changeQuantity = (componentId: string, delta: number) =>
+    setItems(prev => prev.map(i => (i.id === componentId ? { ...i, quantity: i.quantity + delta } : i)));
 
-  const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
-  const lowCount = items.filter(needsRestock).length;
-  const categoryCount = categories.length;
-  const healthyPct = items.length ? Math.round(((items.length - lowCount) / items.length) * 100) : 0;
+  function borrow(item: ComponentItem, req: BorrowRequest) {
+    const needsApproval = !!item.requiresApproval;
+    setBorrows(prev => [...prev, {
+      id: `b-${Date.now()}`,
+      componentId: req.componentId,
+      borrowerId: member.id,
+      quantity: req.quantity,
+      borrowedAt: new Date().toISOString(),
+      dueAt: new Date(`${req.dueDate}T17:00:00`).toISOString(),
+      status: needsApproval ? "pending" : "borrowed",
+    }]);
+    // Stock only goes down once the borrow is actually handed out.
+    if (!needsApproval) changeQuantity(req.componentId, -req.quantity);
+  }
 
-  return <div className="app">
-    <header className="topbar">
-      <a className="topbar__brand" href="/"><img className="topbar__logo" src="/drc-logo-white.png" alt="Drones and Robotics Club" /><span className="topbar__title">Inventory</span></a>
-    </header>
+  function giveBack(req: ReturnRequest) {
+    const record = borrows.find(b => b.id === req.borrowId);
+    if (!record) throw new Error("This borrow wasn't found. Refresh and try again.");
+    const left = record.quantity - req.quantity;
+    setBorrows(prev => prev.map(b => b.id !== req.borrowId ? b
+      : left > 0 ? { ...b, quantity: left }                                  // partial return
+      : { ...b, status: "returned", returnedAt: new Date().toISOString() }));
+    // Damaged or incomplete items don't go back on the shelf until a manager checks them.
+    if (req.condition === "good") changeQuantity(record.componentId, req.quantity);
+  }
 
-    <main className="page">
-      <header className="page-header">
-        <div className="page-header__text"><p className="eyebrow">Drones & Robotics Club</p><h1>Inventory overview</h1><p>Find components and where they are stored.</p></div>
-      </header>
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppShell member={member} />}>
+          {/* Member 1 — find and borrow */}
+          <Route index element={<Home items={items} memberName={member.name.split(" ")[0]} />} />
+          <Route path="category/:name" element={<CategoryRoute items={items} />} />
+          <Route path="items/:id" element={
+            <ItemRoute items={items} borrows={borrows} memberId={member.id} onBorrow={borrow} onReturn={giveBack} />
+          } />
 
-      <section className="stat-grid" aria-label="Inventory summary">
-        <article className="stat stat--hero">
-          <div className="stat__head"><span className="stat__icon"><Boxes size={22}/></span><span className="stat__label">Component types</span></div>
-          <strong className="stat__value">{items.length}</strong>
-          <small className="stat__note">across {categoryCount} categories</small>
-          <Boxes className="stat__deco" aria-hidden="true"/>
-        </article>
-        <article className="stat">
-          <div className="stat__head"><span className="stat__icon"><Package size={22}/></span><span className="stat__label">Total units</span></div>
-          <strong className="stat__value">{totalUnits}</strong>
-          <div className="meter" role="img" aria-label={`${healthyPct}% of component types are well stocked`}><span style={{ width: `${healthyPct}%` }}/></div>
-          <small className="stat__note">{healthyPct}% of types well stocked</small>
-        </article>
-        <article className={lowCount ? "stat stat--alert" : "stat"}>
-          <div className="stat__head"><span className="stat__icon"><TriangleAlert size={22}/></span><span className="stat__label">Low-stock alerts</span></div>
-          <strong className="stat__value">{lowCount}</strong>
-          <small className="stat__note">{lowCount ? "Needs restocking soon" : "All good"}</small>
-        </article>
-      </section>
+          {/* Member 2 — requests, reports, profile */}
+          <Route path="profile" element={<Placeholder title="My profile" description="Your borrowed items, due dates and return status." />} />
+          <Route path="orders" element={<Placeholder title="My orders" description="Parts you've requested and whether they were approved." />} />
+          <Route path="orders/new" element={<Placeholder title="New order" description="Request a part the club doesn't have yet." />} />
+          <Route path="report" element={<Placeholder title="Report damage or loss" description="Tell the committee what happened, with a photo." />} />
 
-      <section className="panel">
-        <div className="panel__header">
-          <div className="panel__title"><span className="panel__icon"><Cpu size={20}/></span><div><h2>Electronics components</h2><p>Search by name, category, or storage location.</p></div></div>
-        </div>
+          {/* Member 2 — admin (managers and admins only) */}
+          <Route path="admin" element={<RequireManager allowed={member.role !== "member"}><AdminLayout pendingCount={pendingCount} /></RequireManager>}>
+            <Route index element={<Placeholder bare title="Admin dashboard" description="Parts used, returns, and unaccounted items." />} />
+            <Route path="availability" element={<Placeholder bare title="Availability" description="The full catalog with a High / Medium / Low stock filter." />} />
+            <Route path="orders" element={<Placeholder bare title="Orders" description="Approve or reject borrow requests and part orders." />} />
+          </Route>
 
-        <div className="toolbar">
-          <SearchBar value={query} onChange={setQuery} placeholder="Search components..." />
-          <div className="toolbar__filters">
-            <label className="select"><span className="sr-only">Category</span>
-              <select value={category} onChange={e => setCategory(e.target.value)}>
-                <option value="all">Category: All</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select><ChevronDown size={14}/></label>
-            <label className="select"><span className="sr-only">Stock status</span>
-              <select value={stock} onChange={e => setStock(e.target.value)}>
-                <option value="all">Status: All</option>
-                <option value="in">In stock</option>
-                <option value="low">Low stock</option>
-                <option value="out">Out of stock</option>
-              </select><ChevronDown size={14}/></label>
-          </div>
-        </div>
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
-        <div className="table-wrap table-wrap--cards"><table className="table">
-          <thead><tr><th>ID</th><th>Component</th><th>Category</th><th className="num">Quantity</th><th>Storage location</th><th>Status</th><th><span className="sr-only">Details</span></th></tr></thead>
-          <tbody>
-            {visibleItems.map(item => {
-              const open = openId === item.id;
-              return <Fragment key={item.id}>
-                <tr className={open ? "is-open" : undefined}>
-                  <td className="cell-id"><a className="table__id" href={`#${item.id}`}>{item.id}</a></td>
-                  <td className="cell-title table__primary">{item.name}</td>
-                  <td className="cell-meta">{item.category}</td>
-                  <td className="num cell-end" data-label="Quantity">{item.quantity}</td>
-                  <td className="cell-footer"><span className="location"><MapPin size={14}/>{item.location}</span></td>
-                  <td className="cell-status"><StockBadge quantity={item.quantity} minimumStock={item.minimumStock} /></td>
-                  <td className="cell-toggle table__toggle-cell"><button className="icon-btn" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} details for ${item.name}`} onClick={() => setOpenId(open ? null : item.id)}><ChevronDown size={16}/></button></td>
-                </tr>
-                {open && <tr className="table__details"><td colSpan={7}>
-                  <dl className="facts">
-                    <div className="fact"><dt>On hand</dt><dd>{item.quantity}</dd></div>
-                    <div className="fact"><dt>Minimum stock</dt><dd>{item.minimumStock}</dd></div>
-                    <div className="fact"><dt>Storage location</dt><dd>{item.location}</dd></div>
-                    <div className="fact"><dt>Part number</dt><dd>{item.partNumber ?? "—"}</dd></div>
-                  </dl>
-                </td></tr>}
-              </Fragment>;
-            })}
-            {visibleItems.length === 0 && <tr><td className="table__empty" colSpan={7}>
-              <div className="empty-state">
-                <span className="empty-state__icon"><Inbox size={24}/></span>
-                {items.length === 0
-                  ? <><h3>No components yet</h3><p>Components will appear here once they are added.</p></>
-                  : <><h3>No matching components</h3><p>Try a different name or clear the filters.</p></>}
-              </div>
-            </td></tr>}
-          </tbody>
-        </table></div>
-      </section>
+/* ---- Small route helpers: read the address, then hand the right data to the page ---- */
 
-    </main>
+function CategoryRoute({ items }: { items: ComponentItem[] }) {
+  const { name = "" } = useParams();
+  return <Category category={name} items={items} />;
+}
 
-    <footer className="footer">Drones &amp; Robotics Club · Inventory</footer>
-  </div>;
+interface ItemRouteProps {
+  items: ComponentItem[];
+  borrows: BorrowRecord[];
+  memberId: string;
+  onBorrow: (item: ComponentItem, req: BorrowRequest) => void;
+  onReturn: (req: ReturnRequest) => void;
+}
+
+function ItemRoute({ items, borrows, memberId, onBorrow, onReturn }: ItemRouteProps) {
+  const { id } = useParams();
+  const item = items.find(i => i.id === id);
+  if (!item) return <NotFound />;
+
+  const loans = borrows.filter(b => b.componentId === item.id && isActive(b));
+  return (
+    <ItemDetail
+      item={item}
+      activeLoans={loans.map(b => ({ quantity: b.quantity, dueAt: b.dueAt }))}
+      myBorrow={loans.find(b => b.borrowerId === memberId)}
+      onBorrow={req => onBorrow(item, req)}
+      onReturn={onReturn}
+    />
+  );
+}
+
+/** Hides admin pages from regular members. This is only for the screen —
+ *  real protection must come from Supabase row-level security (Backend). */
+function RequireManager({ allowed, children }: { allowed: boolean; children: ReactNode }) {
+  return allowed ? <>{children}</> : <Navigate to="/" replace />;
 }

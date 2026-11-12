@@ -301,6 +301,7 @@ table { width: 100%; border-collapse: collapse; }
   font-weight: var(--weight-medium);
   transition: background var(--duration-fast), color var(--duration-fast);
 }
+.nav-link svg { flex: none; }                    /* stop icons shrinking in the phone tab row */
 .nav-link:hover { background: var(--color-surface-soft); color: var(--color-primary-strong); text-decoration: none; }
 .nav-link.is-active,
 .nav-link[aria-current="page"] {
@@ -336,6 +337,7 @@ table { width: 100%; border-collapse: collapse; }
   }
   .sidebar__label, .sidebar__spacer { display: none; }
   .nav-link { white-space: nowrap; }
+  .app-layout { grid-template-rows: auto 1fr; }   /* keep the tab row its own height */
 }
 
 @media (max-width: 600px) {
