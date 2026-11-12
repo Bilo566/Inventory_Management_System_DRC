@@ -1,23 +1,66 @@
+/* Shared data shapes for the whole app.
+   Keep these in step with supabase/schema.sql — tell Backend when you change one. */
+
+/** How an item is tracked.
+ *  "count"  → countable parts (resistors, jumper wires): we only store how many.
+ *  "unit"   → individual devices (camera, tripod): each one has its own tag and status. */
+export type TrackingMode = "count" | "unit";
+
 export interface ComponentItem {
   id: string;
   name: string;
   category: string;
   partNumber?: string;
+  /** Available right now. For "unit" items this equals the number of units with status "available". */
   quantity: number;
   minimumStock: number;
   location: string;
   notes?: string;
+  /** Defaults to "count" when missing. */
+  tracking?: TrackingMode;
+  /** True when a manager must approve a borrow before it goes through. */
+  requiresApproval?: boolean;
 }
+
+export type UnitStatus = "available" | "borrowed" | "repair" | "lost";
+
+/** One physical device of a "unit" item, e.g. "Camera #2". */
+export interface DeviceUnit {
+  id: string;
+  componentId: string;
+  /** Label printed on the device, e.g. "CAM-02". */
+  assetTag: string;
+  serialNumber?: string;
+  status: UnitStatus;
+}
+
+export type MemberRole = "member" | "manager" | "admin";
+
+export interface Member {
+  id: string;
+  name: string;
+  email: string;
+  role: MemberRole;
+}
+
+export type BorrowStatus =
+  | "pending"   // waiting for a manager (items with requiresApproval)
+  | "rejected"  // a manager said no
+  | "borrowed"
+  | "returned"
+  | "overdue";
 
 export interface BorrowRecord {
   id: string;
   componentId: string;
+  /** Set when a specific device was lent out ("unit" items only). */
+  unitId?: string;
   borrowerId: string;
   quantity: number;
   borrowedAt: string;
   dueAt?: string;
   returnedAt?: string;
-  status: "borrowed" | "returned" | "overdue";
+  status: BorrowStatus;
 }
 
 export interface FilamentSpool {
