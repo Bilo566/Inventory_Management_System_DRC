@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, ShieldCheck } from "lucide-react";
 import type { ComponentItem } from "../types/inventory";
 import Dialog from "./Dialog";
 import QuantityInput from "./QuantityInput";
@@ -16,6 +16,8 @@ interface BorrowDialogProps {
   onClose: () => void;
   /** Saves the borrow. Throw an Error to show its message in the dialog. */
   onConfirm: (request: BorrowRequest) => Promise<void> | void;
+  /** The item needs a committee member to approve the borrow first. */
+  needsApproval?: boolean;
 }
 
 /** YYYY-MM-DD in the member's local time (toISOString would shift to UTC). */
@@ -23,7 +25,7 @@ const toDateInput = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const addDays = (days: number) => { const d = new Date(); d.setDate(d.getDate() + days); return d; };
 
-export default function BorrowDialog({ item, onClose, onConfirm }: BorrowDialogProps) {
+export default function BorrowDialog({ item, onClose, onConfirm, needsApproval = false }: BorrowDialogProps) {
   const available = item.quantity;
   const [quantity, setQuantity] = useState(1);
   const [dueDate, setDueDate] = useState(toDateInput(addDays(7)));
@@ -54,7 +56,7 @@ export default function BorrowDialog({ item, onClose, onConfirm }: BorrowDialogP
 
   return (
     <Dialog
-      title={`Borrow ${item.name}`}
+      title={needsApproval ? `Request to borrow ${item.name}` : `Borrow ${item.name}`}
       description={<span className="location"><MapPin size={14} aria-hidden="true" />{item.location} · {available} available</span>}
       onClose={onClose}
     >
@@ -71,12 +73,19 @@ export default function BorrowDialog({ item, onClose, onConfirm }: BorrowDialogP
           {dateError ? <p className="field__error">{dateError}</p> : <p className="field__hint">You'll get a reminder before this date.</p>}
         </div>
 
+        {needsApproval && (
+          <div className="alert alert--info">
+            <ShieldCheck size={18} aria-hidden="true" />
+            <span>This item needs approval. A committee member will review your request before you can pick it up.</span>
+          </div>
+        )}
+
         {error && <div className="alert alert--danger" role="alert">{error}</div>}
 
         <div className="dialog__actions">
           <button type="button" className="btn btn--ghost" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn--primary" disabled={!!quantityError || !!dateError || saving}>
-            {saving ? <><span className="spinner" aria-hidden="true" /> Saving…</> : "Confirm borrow"}
+            {saving ? <><span className="spinner" aria-hidden="true" /> Saving…</> : needsApproval ? "Send request" : "Confirm borrow"}
           </button>
         </div>
       </form>

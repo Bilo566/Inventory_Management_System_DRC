@@ -7,19 +7,23 @@ import AdminLayout from "./components/AdminLayout";
 import Home from "./pages/Home";
 import Category from "./pages/Category";
 import ItemDetail from "./pages/ItemDetail";
+import Availability from "./pages/admin/Availability";
 import Placeholder, { NotFound } from "./pages/Placeholder";
 import type { BorrowRequest } from "./components/BorrowDialog";
 import type { ReturnRequest } from "./components/ReturnDialog";
 
 /* All page addresses live here.
-   Data comes from src/data/sampleData.ts for now and is kept in memory, so a full page reload resets it.
+   While building (npm run dev) the pages use src/data/sampleData.ts so there is something to click through.
+   The real site (npm run build / Vercel) never shows sample data — it starts empty until Supabase is connected.
    When Supabase is ready, swap the useState calls below for real queries. */
+
+const isDev = import.meta.env.DEV;
 
 const isActive = (b: BorrowRecord) => b.status === "borrowed" || b.status === "overdue";
 
 export default function App() {
-  const [items, setItems] = useState<ComponentItem[]>(sampleItems);
-  const [borrows, setBorrows] = useState<BorrowRecord[]>(sampleBorrows);
+  const [items, setItems] = useState<ComponentItem[]>(isDev ? sampleItems : []);
+  const [borrows, setBorrows] = useState<BorrowRecord[]>(isDev ? sampleBorrows : []);
   const member = currentMember;
   const pendingCount = borrows.filter(b => b.status === "pending").length;
 
@@ -72,7 +76,7 @@ export default function App() {
           {/* Member 2 — admin (managers and admins only) */}
           <Route path="admin" element={<RequireManager allowed={member.role !== "member"}><AdminLayout pendingCount={pendingCount} /></RequireManager>}>
             <Route index element={<Placeholder bare title="Admin dashboard" description="Parts used, returns, and unaccounted items." />} />
-            <Route path="availability" element={<Placeholder bare title="Availability" description="The full catalog with a High / Medium / Low stock filter." />} />
+            <Route path="availability" element={<Availability items={items} />} />
             <Route path="orders" element={<Placeholder bare title="Orders" description="Approve or reject borrow requests and part orders." />} />
           </Route>
 
@@ -104,11 +108,13 @@ function ItemRoute({ items, borrows, memberId, onBorrow, onReturn }: ItemRoutePr
   if (!item) return <NotFound />;
 
   const loans = borrows.filter(b => b.componentId === item.id && isActive(b));
+  const myRequest = borrows.find(b => b.componentId === item.id && b.borrowerId === memberId && b.status === "pending");
   return (
     <ItemDetail
       item={item}
       activeLoans={loans.map(b => ({ quantity: b.quantity, dueAt: b.dueAt }))}
       myBorrow={loans.find(b => b.borrowerId === memberId)}
+      myRequest={myRequest}
       onBorrow={req => onBorrow(item, req)}
       onReturn={onReturn}
     />

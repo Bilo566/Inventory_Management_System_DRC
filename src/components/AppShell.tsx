@@ -19,7 +19,6 @@ export default function AppShell({ member }: AppShellProps) {
         </Link>
 
         <div className="topbar__actions">
-          <span className="topbar__chip">Prototype · Sample data</span>
           {canManage && (
             <Link className="icon-btn icon-btn--on-primary" to="/admin" aria-label="Admin dashboard" title="Admin">
               <ShieldCheck size={18} aria-hidden="true" />

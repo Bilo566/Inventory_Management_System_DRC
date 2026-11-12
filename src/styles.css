@@ -642,7 +642,7 @@ table { width: 100%; border-collapse: collapse; }
 .table tbody tr { transition: background .12s; }
 .table tbody tr:hover { background: var(--color-surface-soft); }
 .table .num { text-align: end; font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); }
-.table__id { font-weight: var(--weight-semibold); color: var(--color-accent); font-variant-numeric: tabular-nums; }
+.table__id { font-weight: var(--weight-semibold); color: var(--color-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .table__primary { font-weight: var(--weight-semibold); }
 .table__toggle-cell { width: 56px; text-align: end; }
 .table__empty { padding: var(--space-6) !important; text-align: center; color: var(--color-text-muted); }

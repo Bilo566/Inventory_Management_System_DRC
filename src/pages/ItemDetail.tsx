@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDownToLine, ArrowLeft, ArrowUpFromLine, CalendarClock, CircleCheck, Info, MapPin, Package } from "lucide-react";
+import { ArrowDownToLine, ArrowLeft, ArrowUpFromLine, CalendarClock, CircleCheck, Hourglass, Info, MapPin, Package, ShieldCheck } from "lucide-react";
 import type { BorrowRecord, ComponentItem } from "../types/inventory";
 import StockBadge from "../components/StockBadge";
 import { categoryIcon } from "../components/CategoryTile";
@@ -19,6 +19,8 @@ interface ItemDetailProps {
   activeLoans?: ActiveLoan[];
   /** The signed-in member's own active borrow of this item, if any. */
   myBorrow?: BorrowRecord;
+  /** The signed-in member's request for this item that is waiting for approval, if any. */
+  myRequest?: BorrowRecord;
   /** Leave out to hide the Borrow button (e.g. signed out). */
   onBorrow?: (request: BorrowRequest) => Promise<void> | void;
   onReturn?: (request: ReturnRequest) => Promise<void> | void;
@@ -27,13 +29,14 @@ interface ItemDetailProps {
 const formatDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : undefined;
 
-export default function ItemDetail({ item, imageUrl, activeLoans = [], myBorrow, onBorrow, onReturn }: ItemDetailProps) {
+export default function ItemDetail({ item, imageUrl, activeLoans = [], myBorrow, myRequest, onBorrow, onReturn }: ItemDetailProps) {
   const [dialog, setDialog] = useState<"borrow" | "return" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const borrowedCount = activeLoans.reduce((sum, loan) => sum + loan.quantity, 0);
   const nextBack = activeLoans.map(l => l.dueAt).filter((d): d is string => !!d).sort()[0];
   const outOfStock = item.quantity <= 0;
+  const needsApproval = !!item.requiresApproval;
   const CategoryIcon = categoryIcon(item.category);
 
   return (
@@ -53,6 +56,7 @@ export default function ItemDetail({ item, imageUrl, activeLoans = [], myBorrow,
           <div className="row">
             <span className="badge badge--neutral badge--tag"><CategoryIcon size={12} aria-hidden="true" />{item.category}</span>
             <StockBadge quantity={item.quantity} minimumStock={item.minimumStock} />
+            {needsApproval && <span className="badge badge--info badge--tag"><ShieldCheck size={12} aria-hidden="true" />Needs approval</span>}
           </div>
           <h1>{item.name}</h1>
           {item.partNumber && <p className="text-muted">Part number {item.partNumber}</p>}
@@ -74,6 +78,13 @@ export default function ItemDetail({ item, imageUrl, activeLoans = [], myBorrow,
             </div>
           )}
 
+          {myRequest && (
+            <div className="alert alert--warning">
+              <Hourglass size={18} aria-hidden="true" />
+              <span>Your request for <b>{myRequest.quantity}</b> is waiting for committee approval.</span>
+            </div>
+          )}
+
           {outOfStock && (
             <div className="alert alert--warning">
               <Info size={18} aria-hidden="true" />
@@ -83,8 +94,8 @@ export default function ItemDetail({ item, imageUrl, activeLoans = [], myBorrow,
 
           <div className="btn-group detail__actions">
             {onBorrow && (
-              <button className="btn btn--primary btn--lg" disabled={outOfStock} onClick={() => { setMessage(null); setDialog("borrow"); }}>
-                <ArrowDownToLine size={18} aria-hidden="true" /> Borrow
+              <button className="btn btn--primary btn--lg" disabled={outOfStock || !!myRequest} onClick={() => { setMessage(null); setDialog("borrow"); }}>
+                <ArrowDownToLine size={18} aria-hidden="true" /> {needsApproval ? "Request to borrow" : "Borrow"}
               </button>
             )}
             {myBorrow && onReturn && (
@@ -106,10 +117,13 @@ export default function ItemDetail({ item, imageUrl, activeLoans = [], myBorrow,
       {dialog === "borrow" && onBorrow && (
         <BorrowDialog
           item={item}
+          needsApproval={needsApproval}
           onClose={() => setDialog(null)}
           onConfirm={async req => {
             await onBorrow(req);
-            setMessage(`Borrowed ${req.quantity} × ${item.name}. Return by ${formatDate(req.dueDate)}.`);
+            setMessage(needsApproval
+              ? `Request sent for ${req.quantity} × ${item.name}. You can pick it up once a committee member approves it.`
+              : `Borrowed ${req.quantity} × ${item.name}. Return by ${formatDate(req.dueDate)}.`);
           }}
         />
       )}
