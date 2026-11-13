@@ -10,6 +10,7 @@ import ItemDetail from "./pages/ItemDetail";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminOrders from "./pages/AdminOrders";
+import AdminAvailability from "./pages/AdminAvailability";
 import Placeholder, { NotFound } from "./pages/Placeholder";
 import type { BorrowRequest } from "./components/BorrowDialog";
 import type { ReturnRequest } from "./components/ReturnDialog";
@@ -85,7 +86,7 @@ export default function App() {
           {/* Member 2 — admin (managers and admins only) */}
           <Route path="admin" element={<RequireManager allowed={member.role !== "member"}><AdminLayout pendingCount={pendingCount} /></RequireManager>}>
             <Route index element={<AdminDashboard items={items} borrows={borrows} members={sampleMembers} units={sampleUnits} stockCounts={sampleStockCounts} />} />
-            <Route path="availability" element={<Placeholder bare title="Availability" description="The full catalog with a High / Medium / Low stock filter." />} />
+            <Route path="availability" element={<AdminAvailability items={items} borrows={borrows} units={sampleUnits} />} />
             <Route path="orders" element={<AdminOrders items={items} borrows={borrows} members={sampleMembers} onApprove={approve} onReject={reject} />} />
           </Route>
 
