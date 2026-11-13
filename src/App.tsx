@@ -1,12 +1,15 @@
 import { useState, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import type { BorrowRecord, ComponentItem } from "./types/inventory";
-import { currentMember, sampleBorrows, sampleItems } from "./data/sampleData";
+import { currentMember, sampleBorrows, sampleItems, sampleMembers, sampleStockCounts, sampleUnits } from "./data/sampleData";
 import AppShell from "./components/AppShell";
 import AdminLayout from "./components/AdminLayout";
 import Home from "./pages/Home";
 import Category from "./pages/Category";
 import ItemDetail from "./pages/ItemDetail";
+import Profile from "./pages/Profile";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminOrders from "./pages/AdminOrders";
 import Placeholder, { NotFound } from "./pages/Placeholder";
 import type { BorrowRequest } from "./components/BorrowDialog";
 import type { ReturnRequest } from "./components/ReturnDialog";
@@ -52,6 +55,18 @@ export default function App() {
     if (req.condition === "good") changeQuantity(record.componentId, req.quantity);
   }
 
+  /** Manager approves a request: it becomes a normal borrow and leaves stock. */
+  function approve(borrowId: string) {
+    const record = borrows.find(b => b.id === borrowId);
+    if (!record) return;
+    setBorrows(prev => prev.map(b => (b.id === borrowId ? { ...b, status: "borrowed", borrowedAt: new Date().toISOString() } : b)));
+    changeQuantity(record.componentId, -record.quantity);
+  }
+
+  function reject(borrowId: string) {
+    setBorrows(prev => prev.map(b => (b.id === borrowId ? { ...b, status: "rejected" } : b)));
+  }
+
   return (
     <BrowserRouter>
       <Routes>
@@ -63,17 +78,15 @@ export default function App() {
             <ItemRoute items={items} borrows={borrows} memberId={member.id} onBorrow={borrow} onReturn={giveBack} />
           } />
 
-          {/* Member 2 — requests, reports, profile */}
-          <Route path="profile" element={<Placeholder title="My profile" description="Your borrowed items, due dates and return status." />} />
-          <Route path="orders" element={<Placeholder title="My orders" description="Parts you've requested and whether they were approved." />} />
-          <Route path="orders/new" element={<Placeholder title="New order" description="Request a part the club doesn't have yet." />} />
+          {/* Member 2 — profile and reports (part orders were dropped: the lead handles those) */}
+          <Route path="profile" element={<Profile member={member} items={items} borrows={borrows} onReturn={giveBack} />} />
           <Route path="report" element={<Placeholder title="Report damage or loss" description="Tell the committee what happened, with a photo." />} />
 
           {/* Member 2 — admin (managers and admins only) */}
           <Route path="admin" element={<RequireManager allowed={member.role !== "member"}><AdminLayout pendingCount={pendingCount} /></RequireManager>}>
-            <Route index element={<Placeholder bare title="Admin dashboard" description="Parts used, returns, and unaccounted items." />} />
+            <Route index element={<AdminDashboard items={items} borrows={borrows} members={sampleMembers} units={sampleUnits} stockCounts={sampleStockCounts} />} />
             <Route path="availability" element={<Placeholder bare title="Availability" description="The full catalog with a High / Medium / Low stock filter." />} />
-            <Route path="orders" element={<Placeholder bare title="Orders" description="Approve or reject borrow requests and part orders." />} />
+            <Route path="orders" element={<AdminOrders items={items} borrows={borrows} members={sampleMembers} onApprove={approve} onReject={reject} />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
