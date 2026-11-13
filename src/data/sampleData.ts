@@ -1,6 +1,6 @@
 /* SAMPLE DATA — made-up records for building and testing screens.
    Not the club's real stock. Replace with Supabase calls once Backend's tables are ready. */
-import type { BorrowRecord, ComponentItem, DeviceUnit, FilamentSpool, FilamentUsage, Member } from "../types/inventory";
+import type { BorrowRecord, ComponentItem, DeviceUnit, FilamentSpool, FilamentUsage, Member, StockCount } from "../types/inventory";
 
 /** ISO date a number of days from today, so "due soon" and "overdue" always look right. */
 const daysFromNow = (days: number) => {
@@ -30,18 +30,20 @@ export const sampleUnits: DeviceUnit[] = [
   { id: "u-04", componentId: "D-002", assetTag: "TRI-01", status: "available" },
   { id: "u-05", componentId: "D-002", assetTag: "TRI-02", status: "available" },
   { id: "u-06", componentId: "D-003", assetTag: "PSU-01", serialNumber: "BPS-30V-5521", status: "available" },
+  { id: "u-07", componentId: "D-002", assetTag: "TRI-03", status: "lost" },
 ];
 
 const availableUnits = (componentId: string) =>
   sampleUnits.filter(u => u.componentId === componentId && u.status === "available").length;
 
-/* ---- Items -------------------------------------------------------------- */
+/* ---- Items --------------------------------------------------------------
+   requiresApproval = expensive parts (placeholder rule until Inventory Logic decides). */
 const countableParts: ComponentItem[] = [
   { id: "C-001", name: "ESP32 development board", category: "Microcontrollers", partNumber: "ESP32-DevKitC", quantity: 12, minimumStock: 3, location: "Cabinet A · Bin 2" },
   { id: "C-002", name: "Arduino Uno R3", category: "Microcontrollers", quantity: 5, minimumStock: 2, location: "Cabinet A · Bin 1" },
-  { id: "C-003", name: "Ultrasonic distance sensor", category: "Sensors", partNumber: "HC-SR04", quantity: 4, minimumStock: 5, location: "Cabinet B · Bin 1" },
+  { id: "C-003", name: "Ultrasonic distance sensor", category: "Sensors", partNumber: "HC-SR04", quantity: 3, minimumStock: 5, location: "Cabinet B · Bin 1" },
   { id: "C-004", name: "GPS module", category: "Sensors", partNumber: "NEO-6M", quantity: 2, minimumStock: 2, location: "Cabinet B · Bin 3" },
-  { id: "C-005", name: "Jumper wires (40 pack)", category: "Wiring", quantity: 18, minimumStock: 5, location: "Drawer C · Tray 4" },
+  { id: "C-005", name: "Jumper wires (40 pack)", category: "Wiring", quantity: 15, minimumStock: 5, location: "Drawer C · Tray 4" },
   { id: "C-006", name: "SG90 micro servo", category: "Motors & servos", quantity: 0, minimumStock: 4, location: "Drawer D · Tray 1" },
   { id: "C-007", name: "Propellers 5045 (pair)", category: "Drone parts", quantity: 24, minimumStock: 10, location: "Shelf E · Box 2" },
   { id: "C-008", name: "LiPo battery 3S 2200 mAh", category: "Batteries & power", quantity: 6, minimumStock: 2, location: "Fireproof cabinet · Shelf 1", requiresApproval: true, notes: "Charge in the LiPo bag only. Return at storage voltage." },
@@ -64,6 +66,17 @@ export const sampleBorrows: BorrowRecord[] = [
   { id: "b-05", componentId: "C-008", borrowerId: "m-04", quantity: 1, borrowedAt: daysFromNow(0), dueAt: daysFromNow(4), status: "pending" },
   { id: "b-06", componentId: "D-002", unitId: "u-04", borrowerId: "m-02", quantity: 1, borrowedAt: daysFromNow(-14), dueAt: daysFromNow(-7), returnedAt: daysFromNow(-8), status: "returned" },
   { id: "b-07", componentId: "D-003", borrowerId: "m-01", quantity: 1, borrowedAt: daysFromNow(0), dueAt: daysFromNow(2), status: "pending" },
+  { id: "b-08", componentId: "C-005", borrowerId: "m-01", quantity: 1, borrowedAt: daysFromNow(-6), dueAt: daysFromNow(1), status: "borrowed" },
+  { id: "b-09", componentId: "C-002", borrowerId: "m-01", quantity: 1, borrowedAt: daysFromNow(-20), dueAt: daysFromNow(-13), returnedAt: daysFromNow(-14), status: "returned" },
+  { id: "b-10", componentId: "C-008", borrowerId: "m-01", quantity: 2, borrowedAt: daysFromNow(-10), status: "rejected" },
+];
+
+/* ---- Stock counts (finds unaccounted items) ------------------------------
+   Item quantities above are already corrected to what was counted. */
+export const sampleStockCounts: StockCount[] = [
+  { id: "sc-01", componentId: "C-005", expected: 18, counted: 15, countedBy: "m-03", countedAt: daysFromNow(-4) },
+  { id: "sc-02", componentId: "C-003", expected: 4, counted: 3, countedBy: "m-03", countedAt: daysFromNow(-4) },
+  { id: "sc-03", componentId: "C-001", expected: 12, counted: 12, countedBy: "m-03", countedAt: daysFromNow(-4) },
 ];
 
 /* ---- Filament ----------------------------------------------------------- */
