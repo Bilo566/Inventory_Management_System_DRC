@@ -63,6 +63,20 @@ export interface BorrowRecord {
   status: BorrowStatus;
 }
 
+/** A physical count of one item's shelf by a manager.
+ *  If fewer are found than the system expected, the gap is "unaccounted"
+ *  (taken without being logged — the cabinets aren't locked). */
+export interface StockCount {
+  id: string;
+  componentId: string;
+  /** What the system said should be on the shelf. */
+  expected: number;
+  /** What the manager actually found. */
+  counted: number;
+  countedBy: string;
+  countedAt: string;
+}
+
 export interface FilamentSpool {
   id: string;
   brand: string;
